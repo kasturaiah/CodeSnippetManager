@@ -1,0 +1,60 @@
+import React from 'react';
+import SearchBar from '../components/SearchBar';
+import SnippetList from '../components/SnippetList';
+
+const Home = ({ snippets, tags, onSearch, onUpdate, user }) => {
+  const handleEdit = async (snippet) => {
+    if (!user || snippet.userId !== user.id) {
+      alert('You can only edit your own snippets.');
+      return;
+    }
+    const newTitle = prompt('Edit title:', snippet.title);
+    if (newTitle && newTitle !== snippet.title) {
+      try {
+        const res = await fetch(`/api/snippets/${snippet.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...snippet, title: newTitle })
+        });
+        if (res.ok) {
+          alert('Snippet updated successfully!');
+          onUpdate();  // Refresh the list
+        } else {
+          alert('Failed to update snippet.');
+        }
+      } catch (err) {
+        alert('Network error. Please try again.');
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!user) {
+      alert('You must be logged in to delete snippets.');
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this snippet?')) {
+      try {
+        const res = await fetch(`/api/snippets/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert('Snippet deleted successfully!');
+          onUpdate();  // Refresh the list
+        } else {
+          alert('Failed to delete snippet.');
+        }
+      } catch (err) {
+        alert('Network error. Please try again.');
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Your Snippets</h1>
+      <SearchBar onSearch={onSearch} tags={tags} />
+      <SnippetList snippets={snippets} onEdit={handleEdit} onDelete={handleDelete} user={user} />
+    </div>
+  );
+};
+
+export default Home;
