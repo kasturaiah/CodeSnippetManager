@@ -12,10 +12,12 @@ app.use('/api/snippets', snippetsRoutes);
 app.use('/api/tags', tagsRoutes);
 
 // Production serving - MUST BE AT THE END
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
+
+if (fs.existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
+  app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
   });
 }
 
