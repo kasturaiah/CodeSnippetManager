@@ -1,6 +1,7 @@
+// backend/routes/tags.js
 const express = require('express');
-const db = require('../database');
 const router = express.Router();
+const db = require('../data-json-db/db');
 
 router.get('/', (req, res) => {
   try {
@@ -8,21 +9,9 @@ router.get('/', (req, res) => {
     const tags = Array.isArray(d.tags) ? d.tags : [];
     return res.json(tags);
   } catch (err) {
-    console.error('GET /api/tags error', err && (err.stack || err.message || err));
-    return res.status(500).json([]);
-  }
-});
-
-module.exports = router;
-
-router.post('/', (req, res) => {
-  const { name } = req.body;
-  try {
-    const stmt = db.prepare('INSERT INTO tags (name) VALUES (?)');
-    const result = stmt.run(name);
-    res.json({ id: result.insertId });
-  } catch (err) {
-    res.status(400).json({ error: 'Tag exists or insert failed' });
+    console.error('GET /api/tags error:', err && (err.stack || err.message || err));
+    // return safe empty array and 500 for visibility
+    return res.status(500).json({ message: 'Server error fetching tags' });
   }
 });
 

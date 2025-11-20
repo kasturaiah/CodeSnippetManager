@@ -2,37 +2,55 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const cors = require('cors');
-
 const app = express();
 
-app.use(express.json());
-app.use(cors({ origin: true, credentials: true }));
+// request logger
+app.use((req, res, next) => {
+  console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
 
-// health-check
+app.use(express.json());
+
+// health
 app.get('/_health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
-// mount API routers (will warn if missing)
-try { app.use('/api/snippets', require('./routes/snippets')); } catch (e) { console.warn('snippets router not found:', e.message); }
-try { app.use('/api/tags', require('./routes/tags')); } catch (e) { console.warn('tags router not found:', e.message); }
-try { app.use('/api/users', require('./routes/users')); } catch (e) { console.warn('users router not found:', e.message); }
+// try to mount routes (will throw warning if file missing)
+function tryMount(p, mountPath) {
+  try {
+    const r = require(p);
+    app.use(mountPath, r);
+    console.log(`Mounted ${p} => ${mountPath}`);
+  } catch (err) {
+    console.warn(`Could not mount ${p}: ${err && err.message}`);
+  }
+}
+
+tryMount('./routes/snippets', '/api/snippets');
+tryMount('./routes/tags', '/api/tags');
+tryMount('./routes/users', '/api/users');
+
+// if /api not matched -> return JSON 404
+app.use('/api', (req, res) => {
+  console.warn(`API 404 ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ message: 'API route not found' });
+});
 
 // serve frontend build if exists
 const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
 if (fs.existsSync(frontendBuildPath)) {
   app.use(express.static(frontendBuildPath));
-  app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(frontendBuildPath, 'index.html'));
-  });
+  app.get(/.*/, (req, res) => res.sendFile(path.join(frontendBuildPath, 'index.html')));
+} else {
+  console.log('No frontend build at', frontendBuildPath);
 }
 
-// global error handler
+// global error logger
 app.use((err, req, res, next) => {
-  console.error('Unhandled error middleware:', err && (err.stack || err.message || err));
+  console.error('Unhandled error:', err && (err.stack || err.message || err));
   res.status(500).json({ message: 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 module.exports = app;
