@@ -11,7 +11,7 @@ app.use(express.json());
 app.use('/api/snippets', snippetsRoutes);
 app.use('/api/tags', tagsRoutes);
 
-// Production serving (moved to end)
+// Production serving - MUST BE AT THE END
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/build')));
   app.get('*', (req, res) => {
