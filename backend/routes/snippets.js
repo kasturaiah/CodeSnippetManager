@@ -1,35 +1,46 @@
-// backend/routes/snippets.js
 const express = require('express');
+const db = require('../database');
 const router = express.Router();
 
-// Replace this with your real DB function.
-// Below is a template. If you use sqlite, better-sqlite3, or knex, plug in your query.
-async function fetchSnippetsFromDb() {
+router.get('/', (req, res) => {
   try {
-    // Example placeholders:
-    // const db = require('../database'); // adjust path
-    // const rows = db.prepare('SELECT id, title, code, tags FROM snippets').all();
-    // return rows.map(r => ({ id: r.id, title: r.title, code: r.code, tags: JSON.parse(r.tags || '[]') }));
-
-    return []; // fallback empty array - replace with actual DB query
-  } catch (err) {
-    console.error('fetchSnippetsFromDb error:', err);
-    throw err;
-  }
-}
-
-router.get('/', async (req, res) => {
-  try {
-    console.log('GET /api/snippets');
-    const list = await fetchSnippetsFromDb();
-    if (!Array.isArray(list)) {
-      console.warn('/api/snippets returned non-array, converting to []', list);
-      return res.json([]);
-    }
+    const d = db.readDb();
+    const list = Array.isArray(d.snippets) ? d.snippets : [];
     return res.json(list);
   } catch (err) {
-    console.error('Error in GET /api/snippets:', err);
+    console.error('GET /api/snippets error', err && (err.stack || err.message || err));
     return res.status(500).json({ message: 'Server error fetching snippets' });
+  }
+});
+
+router.post('/', (req, res) => {
+  try {
+    console.log('POST /api/snippets body:', req.body);
+    const payload = req.body;
+    if (!payload || typeof payload !== 'object') {
+      return res.status(400).json({ message: 'Invalid payload' });
+    }
+    const d = db.readDb();
+    const newId = d.nextId || Date.now();
+    const snippet = {
+      id: newId,
+      userId: payload.userId || null,
+      title: payload.title || 'Untitled',
+      code: payload.code || '',
+      tags: Array.isArray(payload.tags) ? payload.tags : []
+    };
+    d.snippets = Array.isArray(d.snippets) ? d.snippets : [];
+    d.snippets.push(snippet);
+    d.nextId = newId + 1;
+    d.tags = Array.isArray(d.tags) ? d.tags : [];
+    snippet.tags.forEach(t => {
+      if (!d.tags.includes(t)) d.tags.push(t);
+    });
+    db.writeDb(d);
+    return res.status(201).json(snippet);
+  } catch (err) {
+    console.error('POST /api/snippets error', err && (err.stack || err.message || err));
+    return res.status(500).json({ message: 'Server error creating snippet', detail: err.message || String(err) });
   }
 });
 
