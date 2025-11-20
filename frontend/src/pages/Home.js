@@ -3,28 +3,21 @@ import SearchBar from '../components/SearchBar';
 import SnippetList from '../components/SnippetList';
 
 const Home = ({ snippets, tags, onSearch, onUpdate, user }) => {
-  const handleEdit = async (snippet) => {
-    if (!user || snippet.userId !== user.id) {
-      alert('You can only edit your own snippets.');
-      return;
-    }
-    const newTitle = prompt('Edit title:', snippet.title);
-    if (newTitle && newTitle !== snippet.title) {
-      try {
-        const res = await fetch(`/api/snippets/${snippet.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...snippet, title: newTitle })
-        });
-        if (res.ok) {
-          alert('Snippet updated successfully!');
-          onUpdate();  // Refresh the list
-        } else {
-          alert('Failed to update snippet.');
-        }
-      } catch (err) {
-        alert('Network error. Please try again.');
+  const handleEdit = async (id, updatedData) => {
+    try {
+      const res = await fetch(`/api/snippets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      });
+      if (res.ok) {
+        alert('Snippet updated successfully!');
+        onUpdate();  // Refresh the list
+      } else {
+        alert('Failed to update snippet.');
       }
+    } catch (err) {
+      alert('Network error. Please try again.');
     }
   };
 
