@@ -22,7 +22,6 @@ export default function SearchBar({ onSelect }) {
       })
       .then((data) => {
         if (!mounted) return;
-        // defensive: ensure array
         setTags(Array.isArray(data) ? data : []);
       })
       .catch((err) => {
@@ -42,7 +41,7 @@ export default function SearchBar({ onSelect }) {
   }, []);
 
   const filtered = (Array.isArray(tags) ? tags : []).filter((t) =>
-    t.toLowerCase().includes(q.toLowerCase())
+    (t || '').toLowerCase().includes(q.toLowerCase())
   );
 
   if (loading) return <div>Loading tags…</div>;

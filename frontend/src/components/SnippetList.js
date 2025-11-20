@@ -1,127 +1,60 @@
-import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// frontend/src/components/SnippetList.js
+import React, { useEffect, useState } from 'react';
 
-const SnippetList = ({ snippets, onEdit, onDelete, user }) => {
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: '', code: '', language: 'javascript', tags: [], visibility: 'private' });
+export default function SnippetList() {
+  const [snippets, setSnippets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const startEdit = (snippet) => {
-    if (!user || parseInt(snippet.userId) !== parseInt(user.id)) {
-      alert('You can only edit your own snippets.');
-      return;
-    }
-    setEditingId(snippet.id);
-    setEditForm({
-      title: snippet.title,
-      code: snippet.code,
-      language: snippet.language,
-      tags: snippet.tags,
-      visibility: snippet.visibility
-    });
-  };
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
 
-  const saveEdit = () => {
-    if (!editForm.title || !editForm.code) {
-      alert('Title and code are required.');
-      return;
-    }
-    onEdit(editingId, editForm);
-    setEditingId(null);
-  };
+    fetch('/api/snippets')
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          throw new Error(`Status ${res.status} ${text}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!mounted) return;
+        setSnippets(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.error('Error fetching /api/snippets', err);
+        if (mounted) {
+          setError('Failed to load snippets');
+          setSnippets([]);
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
 
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (loading) return <div>Loading snippets…</div>;
+  if (error) return <div>{error}</div>;
+
+  if (!Array.isArray(snippets) || snippets.length === 0) {
+    return <div>No snippets found.</div>;
+  }
 
   return (
     <div>
-      {snippets.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#666' }}>No snippets found. Create one to get started!</p>
-      ) : (
-        snippets.map(snippet => (
-          <div key={snippet.id} className="card">
-            {editingId === snippet.id ? (
-              <div>
-                <h3>Editing Snippet</h3>
-                <input
-                  type="text"
-                  placeholder="Title"
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  className="form-input"
-                />
-                <textarea
-                  placeholder="Code"
-                  value={editForm.code}
-                  onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
-                  className="form-input"
-                  style={{ height: '120px' }}
-                />
-                <select
-                  value={editForm.language}
-                  onChange={(e) => setEditForm({ ...editForm, language: e.target.value })}
-                  className="form-input"
-                >
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="java">Java</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Tags (comma-separated)"
-                  value={editForm.tags.join(', ')}
-                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value.split(', ') })}
-                  className="form-input"
-                />
-                <select
-                  value={editForm.visibility}
-                  onChange={(e) => setEditForm({ ...editForm, visibility: e.target.value })}
-                  className="form-input"
-                >
-                  <option value="private">Private</option>
-                  <option value="public">Public</option>
-                </select>
-                <button onClick={saveEdit} className="btn btn-primary" style={{ marginRight: '10px' }}>Save</button>
-                <button onClick={cancelEdit} className="btn btn-danger">Cancel</button>
-              </div>
-            ) : (
-              <>
-                <h3>{snippet.title}</h3>
-                <p>Language: {snippet.language}</p>
-                <p>Tags: {snippet.tags.join(', ')}</p>
-                <p>Visibility: {snippet.visibility}</p>
-                <div className="snippet-code">
-                  <SyntaxHighlighter language={snippet.language} style={tomorrow}>
-                    {snippet.code}
-                  </SyntaxHighlighter>
-                </div>
-                {user && parseInt(snippet.userId) === parseInt(user.id) && (
-                  <div style={{ marginTop: '10px' }}>
-                    <button
-                      onClick={() => startEdit(snippet)}
-                      className="btn btn-secondary"
-                      style={{ marginRight: '10px' }}
-                      title="Edit this snippet"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(snippet.id)}
-                      className="btn btn-danger"
-                      title="Delete this snippet"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        ))
-      )}
+      {snippets.map((s, idx) => (
+        <div key={s.id || idx} style={{ border: '1px solid #ddd', margin: '8px', padding: '8px' }}>
+          <h3>{s.title || 'Untitled'}</h3>
+          <pre>{s.code || ''}</pre>
+          <div>Tags: {(Array.isArray(s.tags) ? s.tags.join(', ') : '')}</div>
+        </div>
+      ))}
     </div>
   );
-};
-
-export default SnippetList;
+}
