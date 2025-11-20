@@ -1,8 +1,8 @@
-const Database = require('better-sqlite3');
-const db = new Database('./snippets.db', {  });
+const sql = require('sql.js');
+const db = new sql.Database();
 
 // Create tables
-db.exec(`
+db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
@@ -15,9 +15,9 @@ db.exec(`
     title TEXT,
     code TEXT,
     language TEXT,
-    tags TEXT,  -- JSON string for tags array
+    tags TEXT,
     visibility TEXT DEFAULT 'private',
-    userId INTEGER  -- Removed FOREIGN KEY constraint since users are in localStorage
+    userId INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS tags (

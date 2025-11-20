@@ -2,21 +2,23 @@ const express = require('express');
 const db = require('../database');
 const router = express.Router();
 
-// Get all tags
 router.get('/', (req, res) => {
-  const tags = db.prepare('SELECT * FROM tags').all();
-  res.json(tags);
+  try {
+    const stmt = db.prepare('SELECT * FROM tags');
+    res.json(stmt.all());
+  } catch (err) {
+    res.status(500).json({ error: 'Query failed' });
+  }
 });
 
-// Create tag
 router.post('/', (req, res) => {
   const { name } = req.body;
   try {
     const stmt = db.prepare('INSERT INTO tags (name) VALUES (?)');
     const result = stmt.run(name);
-    res.json({ id: result.lastInsertRowid });
-  } catch (e) {
-    res.status(400).json({ error: 'Tag exists' });
+    res.json({ id: result.insertId });
+  } catch (err) {
+    res.status(400).json({ error: 'Tag exists or insert failed' });
   }
 });
 
